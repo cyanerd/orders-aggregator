@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateAtOffset, datesBetween, isCalendarDate, parseUtc, tzOffsetMinutes } from "../src/utils/time.js";
+import { dateAtOffset, dateInTimeZone, datesBetween, isCalendarDate, parseUtc, tzOffsetMinutes } from "../src/utils/time.js";
 
 describe("parseUtc", () => {
   it("строка с Z", () => {
@@ -40,5 +40,21 @@ describe("даты", () => {
 
   it("datesBetween включает границы", () => {
     expect(datesBetween("2026-02-27", "2026-03-02")).toEqual(["2026-02-27", "2026-02-28", "2026-03-01", "2026-03-02"]);
+  });
+});
+
+describe("dateInTimeZone", () => {
+  it("учитывает переход на летнее время", () => {
+    // Europe/Berlin: до 29.03.2026 01:00Z — UTC+1, после — UTC+2
+    expect(dateInTimeZone(new Date("2026-03-28T22:59:59Z"), "Europe/Berlin")).toBe("2026-03-28");
+    expect(dateInTimeZone(new Date("2026-03-28T23:00:00Z"), "Europe/Berlin")).toBe("2026-03-29");
+    expect(dateInTimeZone(new Date("2026-03-29T21:59:59Z"), "Europe/Berlin")).toBe("2026-03-29");
+    expect(dateInTimeZone(new Date("2026-03-29T22:00:00Z"), "Europe/Berlin")).toBe("2026-03-30");
+  });
+
+  it("таймзоны без летнего времени и с отрицательным смещением", () => {
+    expect(dateInTimeZone(new Date("2026-02-10T21:30:00Z"), "Europe/Moscow")).toBe("2026-02-11");
+    expect(dateInTimeZone(new Date("2026-02-10T04:59:59Z"), "America/New_York")).toBe("2026-02-09");
+    expect(dateInTimeZone(new Date("2026-02-10T23:59:59Z"), "UTC")).toBe("2026-02-10");
   });
 });

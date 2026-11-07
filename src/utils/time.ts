@@ -12,7 +12,10 @@ export function parseUtc(raw: unknown): Date {
   return d;
 }
 
-/** Смещение таймзоны относительно UTC в минутах в момент `at` (Europe/Moscow → 180). */
+/**
+ * Смещение таймзоны относительно UTC в минутах в момент `at` (Europe/Moscow → 180).
+ * Смещение зависит от момента (летнее время), поэтому для дат заказов используйте `dateInTimeZone`.
+ */
 export function tzOffsetMinutes(timeZone: string, at: Date): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -32,6 +35,20 @@ export function tzOffsetMinutes(timeZone: string, at: Date): number {
 /** Календарная дата (YYYY-MM-DD) момента `at` при смещении `offsetMinutes`. */
 export function dateAtOffset(at: Date, offsetMinutes: number): string {
   return new Date(at.getTime() + offsetMinutes * 60_000).toISOString().slice(0, 10);
+}
+
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** Календарная дата (YYYY-MM-DD) момента `at` в таймзоне `timeZone` — с учётом перехода на летнее время. */
+export function dateInTimeZone(at: Date, timeZone: string): string {
+  let fmt = dateFormatters.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    dateFormatters.set(timeZone, fmt);
+  }
+  const parts = fmt.formatToParts(at);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
